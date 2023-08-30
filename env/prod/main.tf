@@ -4,7 +4,7 @@ module "prod" {
   nome-repo = "prod"
   cargo-iam = "prod"
   ambiente  = "prod"
-
+  cluster-nome = "prod"
 }
 
 output "ip-alb" {

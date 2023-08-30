@@ -9,3 +9,7 @@ variable "cargo-iam" {
 variable "ambiente" {
   type = string
 }
+
+variable "cluster-nome" {
+  type = string
+}
