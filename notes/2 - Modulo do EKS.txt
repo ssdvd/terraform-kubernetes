@@ -125,3 +125,15 @@ aqui estamos definido o tamanho do nosso auto scaling, com o recurso nomeado de
 asc(Auto Scaling Cluster) e nele definimos a quantidade de instancias minimas que
 e 1, maximo de 10 e deseja de 3, associamos o sg para acesso ssh e definimos o tipo
 de instancia que sera criada, no caso a t2.micro.
+
+Nessa aula, você aprendeu como:
+
+Alterar um grupo de segurança, sem ter que apagá-lo e criar um novo, mudando apenas 
+as portas e protocolos;
+
+Utilizar o módulo do EKS, escolhendo qual tipo de gerenciamento deve ser realizado; 
+
+podendo ser feito por nós ou pelo EKS;
+
+Criar um cluster do EKS, alocando máquinas para ele e colocando-o em uma VPC para 
+separação e proteção de dados.
