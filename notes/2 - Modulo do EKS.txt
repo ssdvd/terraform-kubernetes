@@ -1,0 +1,127 @@
+Alterando o security group:
+
+antes de iniciar nosso cluster do EKS, devemos alterar nosso arquivo sg.tf, onde
+contem nossas regras da infra anterior. No bloco de cod:
+
+resource "aws_security_group" "ssh-cluster" {
+  name   = "ssh-cluster"
+  vpc_id = module.vpc.vpc_id
+}
+
+agora temos o sg para ssh-cluster, que servira para podermos ter acesso ao cluster
+e tambem modificamos a regra de entrada:
+
+resource "aws_security_group_rule" "ssh-cluster-in" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ssh-cluster.id
+}
+
+aqui estamos permitindo acesso de entrada a porta 22, protocolo tcp e a partir de
+qualquer ipv4 e tambem ja associamos ao nosso sg recem criado. e na saida:
+
+resource "aws_security_group_rule" "ssh-cluster-out" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ssh-cluster.id
+}
+
+aqui permitindo a saida de qualquer porta, por qualquer tipo de protocolo, para 
+qualquer origem ipv4 da internet e associamos nosso sg tambem.
+
+Modulo do EKS:
+
+e para iniciarmos nosso arquivo do EKS, podemos ir na documentacao do terraform
+e utilizar do modulo eks aws oficial, e podemos usar o exemplo que nos e dado. E 
+apenas adequando para o nosso uso, assim deixando somente o necessario para o nosso
+cluster, ficando dessa forma crua:
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.0"
+
+  cluster_name    = "my-cluster"
+  cluster_version = "1.27"
+
+  cluster_endpoint_public_access = true
+
+
+  vpc_id                   = "vpc-1234556abcdef"
+  subnet_ids               = ["subnet-abcde012", "subnet-bcde012a", "subnet-fghi345a"]
+  control_plane_subnet_ids = ["subnet-xyzde987", "subnet-slkjf456", "subnet-qeiru789"]
+
+  # EKS Managed Node Group(s)
+  eks_managed_node_group_defaults = {
+    instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
+  }
+
+  eks_managed_node_groups = {
+    blue = {}
+    green = {
+      min_size     = 1
+      max_size     = 10
+      desired_size = 1
+
+      instance_types = ["t3.large"]
+      capacity_type  = "SPOT"
+    }
+  }
+
+  # Fargate Profile(s)
+  fargate_profiles = {
+    default = {
+      name = "default"
+      selectors = [
+        {
+          namespace = "default"
+        }
+      ]
+    }
+  }
+}
+
+dentro esse bloco de cod, generico e onde podemos comecar a modificar para o nosso
+uso. nesse bloco de cod:
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.0"
+
+  cluster_name    = var.cluster-name
+  cluster_version = "1.27"
+  cluster_endpoint_private_access = true
+
+
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnets
+}
+
+aqui estamos indicando que iremos utilizar o modulo eks do terraform, em cluster_name
+estamos definindo o nome com a var.cluster-name para diferenciar os ambientes futuros
+em cluster_version definindo a versao para 1.27 que atualmente e a mais recente
+em cluster_endpoint_private_access, estamos especificando que so teremos acesso a partir 
+da nossa subrede privada, em vpc_id associamos nossa vpc a partir do nosso modulo
+e em subnet_ids associamos os subredes privadas com module.vpc.private_subnets.
+
+em:
+
+eks_managed_node_groups = {
+    asc = {
+      min_size     = 1
+      max_size     = 10
+      desired_size = 3
+      vpc_security_group_ids = [aws_security_group.ssh-cluster]
+      instance_types = ["t2.micro"]
+    }
+  }
+
+aqui estamos definido o tamanho do nosso auto scaling, com o recurso nomeado de 
+asc(Auto Scaling Cluster) e nele definimos a quantidade de instancias minimas que
+e 1, maximo de 10 e deseja de 3, associamos o sg para acesso ssh e definimos o tipo
+de instancia que sera criada, no caso a t2.micro.

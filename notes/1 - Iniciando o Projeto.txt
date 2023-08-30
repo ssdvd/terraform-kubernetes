@@ -1,0 +1,34 @@
+Entendendo o projeto:
+
+vamos migrar nossa aplicacao que se encontra no ecs para o eks, assim poderemos obter
+algumas vantagens, elas sao:
+
+Simplicidade na migracao entre provedores
+Maior resistencia a falhas
+facil organizacao do servico com pods 
+interligacao entre provedores
+
+nosso projeto, estara em uma regiao e em pelo menos 2 zonas de disponibilidade
+com duas subrede, uma publica contendo nosso internet gateway e na 
+privada teremos nosso eks, e dentro dele como servico teremos nosso load balancer
+e as intancias que rodam o eks. Tornando assim mais versatil para usar em outros 
+provedores. 
+
+Iniciando o projeto:
+
+fizemos o git clone da nossa infra anterior e ja fizemos alguimas modificacoes 
+que no caso foi remover os arquivos alb.tf, ecs.tf e o iam.tf, ja que iremos utilizar
+o kubernetes, toda esssa configuracao feita nesses arquivo, serao feitas no eks.
+e tambem temos que desprovisionar toda a infra provisionada anteriormente.
+Feito isso ja podemos iniciar nosso projeto.
+
+Nessa aula, você aprendeu como:
+
+Realizar o planejamento para substituir uma aplicação ECS por uma EKS, substituindo 
+o cluster que deve ser utilizado;
+
+Organizar os recursos para as aplicações EKS, deixando as máquinas na rede privada 
+para maior segurança;
+
+Remover o código que não será mais utilizado, sempre executando o comando 
+terraform destroy antes ou o terraform apply após a modificação.
