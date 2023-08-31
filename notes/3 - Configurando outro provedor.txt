@@ -1,0 +1,58 @@
+Subindo o cluster:
+
+antes de subirmos nosso cluster, temos que remover o que nao iremos utilizar do cod,
+no caso tivemos que readequar os arquivo variaveis.tf, main.tf dentro do ambiente e
+tambem o backend. Apos feito essas alteracoes, podemos enfim subir nossa infra
+primeiro atraves do terraform init dentro da pasta do nosso ambiente prod, e em
+seguida o terraform plan, para verificar o sera provisinado e entao o terraform
+apply para de fato subir a infra.
+
+dois provedores:
+
+agora que criamos nosso cluster, o que costuma demorar de 10 a 25 min, dependendo do
+uso do provedor, podemos nos comunicar com o cluster utilizando o cluster_endpoint_private_access
+porem, como o kubernetes nao e um recurso nativo da aws nao podemos criar nenhum novo
+recurso dentro desse cluster kubernetes, e ai que se faz necessario trabalharmos com
+dois provedores a aws e o proprio kubernetes. 
+
+e para isso temos que acessar a documentacao dentro do terraform sobre o provedor 
+kubernetes e como utilizar junto ao aws, e ao acessarmos a documentacao referente 
+a esse assunto, a doc nos joga no github com 2 exemplos de uso e e de la que iremos 
+pegar o cod necessario para conectar os recursos e para isso podemos adicionar 
+o seguinte bloco de cod no arquivo provider.tf:
+
+data "aws_eks_cluster" "default" {
+  name = var.cluster-nome
+}
+
+data "aws_eks_cluster_auth" "default" {
+  name = var.cluster-nome
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.default.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.default.token
+}
+
+assim ja temos conexao com esse provider. e para explicar esse cod, devemos saber
+primeiro o que significa esse data, que esta sendo usado para o aws_eks_cluster e 
+aws_eks_cluster_auth. data do ingles igual a dados, isso revela que estamos lidando
+com uma fonte de dados, e como nem sempre temos a saida desejada do nosso recurso,
+ou ja temos um recurso criado e gostariamos de obter uma informacao sobre ele. Nesses
+casos pordemos recorrer as fontes de dados.
+
+A aws_eks_cluster trata dos dados do cluster, como IP e indicações da forma que nos 
+comunicamos com ele, entre outros. Já a aws_eks_cluster_auth serve para autorizações, 
+permitindo a comunicação, a troca de chaves e a garantia da segurança.
+
+Nessa aula, você aprendeu como:
+
+Criar e configurar um segundo provedor, o Kubernetes, usando os exemplos 
+fornecidos pelo Terraform na documentação;
+
+Trabalhar com dois provedores de recursos no Terraform, a AWS, que provê a 
+infraestrutura e o Kubernetes, que a configura para a aplicação;
+
+Usar os Data Sources, que funcionam como fonte de dados da nossa infraestrutura, 
+para recursos já existentes ou que acabamos de criar.
