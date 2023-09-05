@@ -1,0 +1,127 @@
+preparando a aplicacao para rodar usando o kubernetes:
+
+primeiro temos que criar um arquivo no caso e kubernetes.tf, onde iremos colocar todo
+o conteudo relacionado a kubernetes. e para isso primeiro temos que adicionar o seguinte
+bloco de codigo:
+
+resource "kubernetes_deployment" "django-api" {
+  metadata {
+    name = "django-api"
+    labels = {
+      nome = "django"
+    }
+  }
+
+Aqui estamos criando um recurso kubernetes_deployment com o nome de django-api, qual
+realizara o deploy, e especificamos os seguintes campos do metadata que sao alguns
+dados que nossa aplicacao ira ter, name = nome para nossa aplicacao e em label seria
+como se fosse um tipo de tag, porem como parametro para especificacao do que se trata
+a nossa aplicacao. e em:
+
+  spec {
+    replicas = 3
+
+    selector {
+      match_labels = {
+        nome = "django"
+      }
+    }
+
+aqui estamos especificando a nossa infra para essa aplicacao, em replicas teremos 3
+onde poderemos atender mais requisicoes, porem deixando um pouco mais caro. Ja em 
+selector utilizamos o parametro match_labels para poder especificar a nossa aplicacao
+alvo, por isso o campo nome = "django" esta ali, para poder identificar.
+
+    template {
+      metadata {
+        labels = {
+          nome = "django"
+        }
+      }
+
+aqui seria o nosso template que iremos utilizar para a aplicacao
+
+      spec {
+        container {
+          image = "027662851187.dkr.ecr.us-east-2.amazonaws.com/producao:v1"
+          name  = "django"
+
+          resources {
+            limits = {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
+          }
+
+ja aqui, estamos especificando qual imagem iremos utilizar, e estamos apontando para o 
+nosso repositorio ECR junto com a imagem buildada anteriormente, e tambem estamos especificando
+o total de desempenho que cada host tera.
+
+Verificacao de saude:
+
+com o seguinte bloco de codigo, podemos realizar o nosso health check, para validar o 
+funcionamento da nossa aplicacao atraves do kubernetes:
+
+          liveness_probe {
+            http_get {
+              path = "/clientes/"
+              port = 8000
+            }
+
+Aqui estamos dizendo atraves do liveness_probe, que iremos realizar um requisicao usando
+o http_get, e o caminho dessa requisicao e path =  "/clientes/" e sera feita pela
+porta 8000, que e a da nossa aplicacao. Ja em:
+
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
+        }
+      }
+    }
+  }
+}
+
+aqui estamos dizendo qual e a periodicidade em que esse "health check" sera realizado
+em initial_delay_seconds, sera a nossa primeira requisicao onde podemos definir um tempo
+em segundos, conforme a nossa aplicacao e em period_seconds sera de quanto em quanto
+tempo ira acontecer novamente a requisicao para verificar a saude, lembrando em respeitar
+o tempo de inicializacao da nossa aplicacao conforme o tamanho dela.
+
+Testando o Kubernetes:
+
+podemos iniciar com o comando terraform init, para atualizar os nossos plugins para os
+nossos provedores, em seguida terraform plan, para podermos verificar o que iremos
+provisionar e se ha algo para ser corrigido, feito isso podemos rodar o comando
+terraform apply, para enfim provisionar nossa aplicacao.
+
+E para verificar se essa infra subiu e esta funcionando, podemos entao acessa pelo
+proprio console da aws, indo em EKS para verificar nossos clusters criados, ao 
+detalhar nosso cluster, podemos verificar os nossos 3 nos, claro se nao houver nenhum
+erro, e indo em cargas de trabalho podemos verificar a nossa aplicacao em execucao,
+alem disso tambem podemos ver as cargas de trabalho criado automaticamente ao provisionar
+o cluster em kubernetes, geralmente e o aws-node, coredns, kube-proxy, ambos recursos
+sao especificados no namespace que foram criados de forma automatica com o nome de
+kube-system. 
+
+Nesse caso nao podemos acessar esse POD(app) diretamente, devemos criar um load balancer
+para entao sim termos acesso direto ao POD, com o seguinte bloco de cod:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: examplo
+spec:
+  selector:
+    app: examplo
+  ports:
+    - port: 1234
+      targetPort: 5678
+  type: LoadBalancer
+
+aqui podemos ver um exemplo que depois do spec, podemos adicionar um LoadBalancer, para
+que enfim possamos acessar nossa app.
