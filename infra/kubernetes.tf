@@ -41,7 +41,7 @@ resource "kubernetes_deployment" "django-api" {
           liveness_probe {
             http_get {
               path = "/"
-              port = 80
+              port = 8000
 
               http_header {
                 name  = "X-Custom-Header"
