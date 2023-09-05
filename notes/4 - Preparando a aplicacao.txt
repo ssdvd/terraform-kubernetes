@@ -125,3 +125,14 @@ spec:
 
 aqui podemos ver um exemplo que depois do spec, podemos adicionar um LoadBalancer, para
 que enfim possamos acessar nossa app.
+
+Nessa aula, você aprendeu como:
+
+Declarar a aplicação de forma que o Terraform possa criá-la usando sua própria 
+linguagem e com os mesmos campos que teria no YAML;
+
+Preparar uma sonda de vida, a liveness probe, que verifica a aplicação para garantir 
+que esteja sempre em funcionamento;
+
+Criar a aplicação no cluster do Kubernetes, subindo os recursos que criamos e 
+verificando se estão em execução no cluster.
