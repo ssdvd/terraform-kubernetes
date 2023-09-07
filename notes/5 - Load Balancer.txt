@@ -1,0 +1,73 @@
+Criando um load balancer:
+
+para criarmos um load balancer usando o kubernetes, devemos inserir o seguinte bloco de
+cod:
+
+resource "kubernetes_service" "LoadBalancer" {
+  metadata {
+    name = "LoadBalancer-django-api"
+  }
+
+  Aqui estamos criando nosso servico do kubernetes com o nome de LoadBalancer, ja em
+  metadata, informamos um nome para podermos, caso seja preciso buscar alguns dados
+  de formas simples. e ja em:
+
+  spec {
+    selector = {
+      nome = "django"
+    }
+    port {
+      port        = 8000
+      target_port = 8000
+    }
+    type = "LoadBalancer"
+  }
+}
+
+aqui estamos especificando para qual recurso esse loadbalancer sera provisionado,
+em spec e selector, estamaos dizendo que service para o nosso pod com o nome django
+e tambem estamos especificando o qual sera a porta da container e do host, e em type
+estamos especificando que se trata de um LoadBalancer. 
+
+Testando a aplicacao:
+
+Feito isso, podemos utilizar o comando terraform apply, para podermos criar nosso 
+LoadBalancer da nossa aplicacao django. Com a infra provisionada, podemos acessar o
+console da aws pela opcao da ec2, dentro dela podemos iremos na opcao de 
+load balancer(balanceador de carga), e por la podemos pegar o DNS do mesmo para
+podermos acessar atraves do link com a porta 8000. E para evitar todo esse processo
+para poder obter o DNS do nosso LoadBalancer, podemos inserir o seguinte bloco de cod:
+
+data "kubernetes_service" "dns-lb" {
+  metadata {
+    name = "LoadBalancer-django-api"
+  }
+}
+
+Esse cod, tem que estar no arquivo kubernetes.tf, e nele estamos criando uma fonte de
+dados para o servico do kubernetes que esta atrelado ao nosso loadbalancer, e essa
+fonte de dados vai dar uma saida dentro da nossa infra atraves do seguinte cod:
+
+output "url-lb" {
+  value = data.kubernetes_service.dns-lb.status
+}
+
+aqui ira conter os dados do nosso servico dns-lb e por conta dele, poderemos ter
+o dns saindo como output no nosso main.tf do nosso ambiente, com o seguinte cod no 
+arquivo main.tf do ambiente:
+
+output "url-lb" {
+  value = module.prod.url-lb
+}
+
+e com esse trecho adicionado, podemos obter o nosso dns como saida toda vez que 
+executarmos o comando terraform apply.
+
+Nessa aula, você aprendeu como:
+Configurar o load balancer, feito através do Kubernetes para alocar nossa 
+aplicação dentro do cluster;
+
+Subir o load balancer e obter a sua URL, possibilitando o acesso a aplicação;
+
+Criar uma saída com o valor da URL, assim não precisamos nos preocupar em entrar 
+no console da AWS para obter seu valor.

@@ -5,3 +5,6 @@ module "prod" {
   cluster-nome = "prod"
 }
 
+output "url-lb" {
+  value = module.prod.url-lb
+}
