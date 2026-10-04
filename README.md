@@ -1,56 +1,69 @@
-# Resumo do projeto
+# terraform-kubernetes
 
-  
+Infraestrutura como código para rodar uma API Django no Kubernetes: o Terraform cria o cluster no Amazon EKS e também publica o deployment e o service da aplicação pelo provider do Kubernetes.
 
-Primeiro projeto de Infraestrutura como código com Kubernetes, utilizando Terraform para provisionamento e AWS como provedor da infraestrutura.
+Projeto do curso **Infraestrutura como código: Terraform e Kubernetes**, da Alura.
 
-  
+## Arquitetura
 
-## 🔨 Funcionalidades do projeto
+```
+              ┌──────────────────────────┐
+usuários ───► │ Service (LoadBalancer)   │ :8000
+              └────────────┬─────────────┘
+                           │
+              ┌────────────▼─────────────┐
+              │ Deployment django-api    │ 3 réplicas
+              │ EKS 1.27, nodes t2.micro │ (1 a 10 nodes)
+              └──────────────────────────┘
+```
 
-  
+| Arquivo | Recursos |
+| --- | --- |
+| [`infra/vpc.tf`](infra/vpc.tf) | VPC `10.0.0.0/16` com 3 subnets públicas, 3 privadas e NAT Gateway |
+| [`infra/eks.tf`](infra/eks.tf) | Cluster EKS 1.27 com managed node group (mínimo 1, desejado 3, máximo 10), pelo módulo `terraform-aws-modules/eks` |
+| [`infra/sg.tf`](infra/sg.tf) | Security groups dos nodes |
+| [`infra/ecr.tf`](infra/ecr.tf) | Repositório de imagens no ECR |
+| [`infra/provider.tf`](infra/provider.tf) | Providers `aws` e `kubernetes`, este autenticado com o token do próprio cluster |
+| [`infra/kubernetes.tf`](infra/kubernetes.tf) | Deployment com 3 réplicas, limites de CPU e memória, liveness probe e Service do tipo `LoadBalancer` |
+| [`env/prod`](env/prod) | Ambiente de produção: chama o módulo e guarda o state em um bucket S3 |
 
-A partir desse projeto você pode:
+## Pré-requisitos
 
-  
+- [Terraform](https://developer.hashicorp.com/terraform/install)
+- AWS CLI com credenciais no perfil `default`
+- `kubectl`, para inspecionar o cluster
+- Um bucket S3 para o state remoto (ajuste o nome em [`env/prod/backend.tf`](env/prod/backend.tf))
+- A imagem da aplicação em um registry acessível pelo cluster (o endereço está fixo em [`infra/kubernetes.tf`](infra/kubernetes.tf))
 
-- Criar ambientes para aplicações no Kubernetes
+## Como usar
 
-- Separar o seu código em múltiplos ambientes, dependendo das necessidades
+```bash
+cd env/prod
+terraform init
+terraform apply
+```
 
-- Criar módulos para acelerar o desenvolvimento no Terraform
+O provider do Kubernetes lê os dados do cluster por um `data source`, então o cluster precisa existir antes dos recursos do Kubernetes. Na primeira execução, crie o cluster primeiro e depois o restante:
 
-  
+```bash
+terraform apply -target=module.prod.module.eks
+terraform apply
+```
 
-## ✔️ Técnicas e tecnologias utilizadas
+O output `url-lb` mostra o endereço do Load Balancer; a API responde na porta `8000`. Para acessar o cluster com o `kubectl`:
 
-  
+```bash
+aws eks update-kubeconfig --region us-east-2 --name prod
+kubectl get pods
+```
 
-Neste App são exploradas as seguintes técnicas e tecnologias:
+Para remover tudo, rode `terraform destroy`.
 
-  
+> O EKS, o NAT Gateway e o Load Balancer são cobrados por hora. Destrua o ambiente quando terminar de estudar.
 
--  **Criação de maquinas para executar PODs do Kubernetes**: criação de maquinas de forma automática pelo EkS (Elastic Kubernetes Service) da AWS feito de forma automática.
+## Projetos relacionados
 
--  **Utilização de módulos**: Utilização dos módulos do Terraform, desenvolvidos pelos provedores e comunidade
+- [terraform-docker-ecs](https://github.com/ssdvd/terraform-docker-ecs): a mesma API no ECS com Fargate.
+- [github-actions-cicd-kubernetes](https://github.com/ssdvd/github-actions-cicd-kubernetes): pipeline de CI/CD entregando no EKS.
 
--  **Elastic Constainer Registry**: o repositório de containers da AWS, onde vamos colocar as nossas imagens.
-
-
-## 🛠️ Abrir e rodar o projeto
-
-  
-
-O projeto foi desenvolvido no VSC (Visual Studio Code), sendo assim, instale o VSC (pode ser uma versão mais recente) e, na tela inicial, procure a opção extensões, ou aperte Ctrl+Shift+X, e busque por HashiCorp Terraform, assim teremos o suporte do intellisense, tornando o trabalho de escrever o código mais rápido.
-
-  
-
-> Caso baixou o zip, extraia o projeto antes de procurá-lo, pois não é possível abrir via arquivo zip
-
-  
-
-Vá até a paste a abra a pasta do projeto. Após abrir o projeto abra um terminal, pode ser o integrado com o VSC, navegue até a pasta `env/prod`  e execute o comando `terraform init` dentro dela, agora temos o Terraform iniciado e podemos começar a utilizá-lo. Para criar a infraestrutura, execute o `terraform apply` na pastas de Produção (`env/prod`).
-
-  
-
-🏆
+As anotações das aulas estão em [`notes/`](notes).
